@@ -1,8 +1,8 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/room/[roomCode]/page": "app/room/[roomCode]/page.js",
-  "/api/socket/route": "app/api/socket/route.js",
+  "/page": "app/page.js",
+  "/api/rooms/route": "app/api/rooms/route.js",
   "/create-room/page": "app/create-room/page.js",
-  "/join-room/page": "app/join-room/page.js",
-  "/page": "app/page.js"
+  "/api/socket/route": "app/api/socket/route.js"
 }
