@@ -11,7 +11,7 @@ import { Card, GameState, Player } from '@/types/game';
 export default function RoomPage() {
   const params = useParams();
   const roomCode = params.roomCode as string;
-  
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -23,12 +23,20 @@ export default function RoomPage() {
     // Initialize socket connection
     const newSocket = io({
       path: '/api/socket',
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      transports: ['websocket'],
     });
 
     newSocket.on('connect', () => {
-      console.log('Socket connected');
+      console.log('Socket connected with ID:', newSocket.id);
       // Join the room
       newSocket.emit('joinRoom', { roomCode });
+    });
+
+    newSocket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err);
+      setError('Failed to connect to game server. Please try again.');
     });
 
     newSocket.on('roomData', (data) => {
@@ -57,7 +65,7 @@ export default function RoomPage() {
 
   const handlePlayCard = (card: Card, position?: { row: number; col: number }) => {
     if (!socket || !gameState) return;
-    
+
     socket.emit('playCard', {
       roomCode,
       card,
@@ -67,7 +75,7 @@ export default function RoomPage() {
 
   const handleStartGame = () => {
     if (!socket) return;
-    
+
     socket.emit('startGame', { roomCode });
   };
 
@@ -95,29 +103,29 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col min-h-screen p-4">
-      <RoomInfo 
-        roomCode={roomCode} 
-        players={players} 
-        gameState={gameState} 
+      <RoomInfo
+        roomCode={roomCode}
+        players={players}
+        gameState={gameState}
         currentPlayer={currentPlayer}
         onStartGame={handleStartGame}
       />
-      
+
       {gameState && gameState.status === 'playing' && (
         <div className="flex flex-col flex-grow">
           <div className="flex-grow">
-            <GameBoard 
-              board={gameState.board} 
+            <GameBoard
+              board={gameState.board}
               onSelectPosition={(position) => {
                 // This will be called when a position is selected on the board
                 // We'll handle this in conjunction with the selected card
               }}
             />
           </div>
-          
+
           <div className="mt-4">
-            <PlayerHand 
-              cards={currentPlayer?.hand || []} 
+            <PlayerHand
+              cards={currentPlayer?.hand || []}
               onPlayCard={handlePlayCard}
               isMyTurn={gameState.currentTurn === currentPlayer?.id}
             />
