@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hostedGames Game[] @relation("host")
+  playerToGame PlayerToGame[]
+}
+
+model Game {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  roomCode    String   @unique
+  status      String   @default("waiting") // waiting, playing, completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  hostId      String   @db.ObjectId
+  host        User     @relation("host", fields: [hostId], references: [id])
+  gameState   GameState?
+  playerToGame PlayerToGame[]
+}
+
+model PlayerToGame {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  playerId  String   @db.ObjectId
+  gameId    String   @db.ObjectId
+  player    User     @relation(fields: [playerId], references: [id])
+  game      Game     @relation(fields: [gameId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([playerId, gameId])
+}
+
+model GameState {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  gameId        String   @unique @db.ObjectId
+  game          Game     @relation(fields: [gameId], references: [id])
+  currentTurn   String   @db.ObjectId // userId of current player
+  board         Json     // 2D array representing the board state
+  deck          Json     // Array of remaining cards
+  player1Hand   Json     // Array of cards in player 1's hand
+  player2Hand   Json     // Array of cards in player 2's hand
+  player1Chips  Int      @default(0) // Number of chips placed by player 1
+  player2Chips  Int      @default(0) // Number of chips placed by player 2
+  sequences     Json     // Array of sequences formed
+  winner        String?  @db.ObjectId // userId of winner, if any
+  lastUpdated   DateTime @default(now())
+}
