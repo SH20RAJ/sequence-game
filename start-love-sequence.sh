@@ -19,11 +19,23 @@ npx prisma generate
 echo "Generating beautiful card designs..."
 node scripts/generate-cards.js
 
-# Start the development server
+# Clear any previous build
+echo "Cleaning previous build..."
+rm -rf .next
+
+# Build the application
+echo "Building the application..."
+npm run build
+
+# Start the production server
 echo "Starting the game server..."
 echo "Once the server is running, open http://localhost:3000 in your browser"
 echo "=================================="
 echo "Share the game with your loved one and enjoy playing together! ❤️"
 echo "=================================="
+echo "To share with your girlfriend, make sure you're on the same network"
+echo "and share your computer's local IP address with port 3000"
+echo "For example: http://192.168.1.X:3000"
+echo "=================================="
 
-npm run dev
+npm start

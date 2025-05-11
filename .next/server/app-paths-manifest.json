@@ -3,5 +3,8 @@
   "/page": "app/page.js",
   "/create-room/page": "app/create-room/page.js",
   "/api/rooms/route": "app/api/rooms/route.js",
-  "/room/[roomCode]/page": "app/room/[roomCode]/page.js"
+  "/room/[roomCode]/page": "app/room/[roomCode]/page.js",
+  "/api/socket/route": "app/api/socket/route.js",
+  "/join-room/page": "app/join-room/page.js",
+  "/api/rooms/[roomCode]/join/route": "app/api/rooms/[roomCode]/join/route.js"
 }

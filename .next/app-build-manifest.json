@@ -21,6 +21,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/room/[roomCode]/page.js"
     ],
+    "/join-room/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/join-room/page.js"
+    ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",

@@ -18,11 +18,26 @@ const initSocketServer = () => {
       addTrailingSlash: false,
       cors: {
         origin: '*',
-        methods: ['GET', 'POST'],
+        methods: ['GET', 'POST', 'OPTIONS'],
+        credentials: true,
       },
+      transports: ['websocket', 'polling'],
+      pingTimeout: 30000,
+      pingInterval: 25000,
+    });
+
+    // Debug connection events
+    io.engine.on("connection_error", (err) => {
+      console.log("Connection error:", err.message);
     });
 
     io.on('connection', (socket) => {
+      console.log(`Socket connected with ID: ${socket.id}`);
+
+      // Debug socket events
+      socket.onAny((event, ...args) => {
+        console.log(`Socket ${socket.id} event: ${event}`, args);
+      });
   console.log('Client connected:', socket.id);
 
   // Join a room
@@ -405,10 +420,34 @@ export async function GET(req: NextRequest) {
   const socketIo = initSocketServer();
 
   // Handle the Socket.io upgrade
-  if (req.headers.get('upgrade') === 'websocket') {
-    const res = new Response(null, { status: 101 });
-    return res;
+  if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+    // This is needed for Socket.io to work with Next.js App Router
+    const upgradeHeader = req.headers.get('connection')?.toLowerCase();
+    if (upgradeHeader === 'upgrade') {
+      const res = new Response(null, { status: 101 });
+      return res;
+    }
   }
 
-  return new Response('Socket.io server is running', { status: 200 });
+  return new Response('Socket.io server is running. Connect with a WebSocket client.', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
+}
+
+// Handle OPTIONS requests for CORS
+export async function OPTIONS(req: NextRequest) {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
 }

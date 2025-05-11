@@ -8,7 +8,7 @@ yarn-error.log*
 .env
 package-lock.json
 .npm
-.next/
+.next
 
 # Python
 __pycache__/
