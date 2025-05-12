@@ -6,6 +6,7 @@ import GameBoard from '@/components/GameBoard';
 import PlayerHand from '@/components/PlayerHand';
 import RoomInfo from '@/components/RoomInfo';
 import LoadingScreen from '@/components/LoadingScreen';
+import WaitingRoom from '@/components/WaitingRoom';
 import { showNotification } from '@/components/Notification';
 import { io, Socket } from 'socket.io-client';
 import { Card, GameState, Player } from '@/types/game';
@@ -22,21 +23,31 @@ export default function RoomPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Set a timeout to prevent infinite loading
+    // Set a shorter timeout to show the waiting room even if socket connection is slow
     const loadingTimeout = setTimeout(() => {
       if (isLoading) {
+        console.log('Loading timeout reached, showing waiting room');
+        // Just set loading to false without error to show the waiting room
         setIsLoading(false);
+      }
+    }, 5000); // 5 seconds timeout
+
+    // Set a longer timeout for actual connection error
+    const errorTimeout = setTimeout(() => {
+      if (!socket || !socket.connected) {
+        console.log('Connection timeout reached, showing error');
         setError('Connection timed out. Please refresh the page and try again.');
       }
     }, 15000); // 15 seconds timeout
 
-    // Initialize socket connection with better configuration
+    // Initialize socket connection with optimized configuration
     const newSocket = io({
       path: '/api/socket',
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      transports: ['websocket', 'polling'],
-      timeout: 20000,
+      // Try polling first as it's more reliable for initial connection
+      transports: ['polling', 'websocket'],
+      timeout: 10000,
       autoConnect: true,
       forceNew: true,
     });
@@ -86,13 +97,16 @@ export default function RoomPage() {
     });
 
     newSocket.on('roomData', (data) => {
-      setPlayers(data.players);
+      console.log('Received roomData:', data);
+      setPlayers(data.players || []);
       setGameState(data.gameState);
       setCurrentPlayer(data.currentPlayer);
+
+      // Important: Set loading to false to show the waiting room
       setIsLoading(false);
 
       // Show notification when player joins
-      if (data.players.length > 1) {
+      if (data.players && data.players.length > 1) {
         showNotification(`${data.players[data.players.length - 1].name} has joined the game!`, 'info');
       }
     });
@@ -125,8 +139,9 @@ export default function RoomPage() {
       // Clean up socket connection
       newSocket.disconnect();
 
-      // Clear the loading timeout
+      // Clear all timeouts
       clearTimeout(loadingTimeout);
+      clearTimeout(errorTimeout);
     };
   }, [roomCode, isLoading]);
 
@@ -175,13 +190,13 @@ export default function RoomPage() {
     showNotification('Starting the game! ❤️', 'success');
   };
 
-  // Show loading screen while connecting
+  // Show loading screen while connecting (but only for a short time)
   if (isLoading) {
     return <LoadingScreen message={error || "Connecting to your love game..."} />;
   }
 
   // Show error screen if there's an error but we're not loading
-  if (error) {
+  if (error && !players.length) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background bg-hearts-pattern">
         <div className="card p-8 text-center max-w-md">
@@ -193,6 +208,26 @@ export default function RoomPage() {
           >
             Refresh Page
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If we have a room code but no socket connection yet, show the waiting room anyway
+  // This ensures users can see and share the room code even if socket connection is slow
+  if (!socket && !isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen p-4 bg-background bg-hearts-pattern">
+        <div className="flex-grow flex flex-col items-center justify-center">
+          <WaitingRoom
+            roomCode={roomCode}
+            players={[]}
+            isHost={true}
+            onStartGame={() => {
+              showNotification('Connecting to game server...', 'info');
+              window.location.reload();
+            }}
+          />
         </div>
       </div>
     );
@@ -234,86 +269,12 @@ export default function RoomPage() {
 
       {(!gameState || gameState.status === 'waiting') && (
         <div className="flex-grow flex flex-col items-center justify-center">
-          <div className="card p-8 text-center max-w-md animate-float relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 opacity-10">
-              <span className="text-9xl text-primary">❤️</span>
-            </div>
-
-            <h2 className="text-2xl font-bold love-title mb-4">Waiting for Your Partner</h2>
-            <p className="text-gray-600 mb-6">
-              Share this room code with your partner so they can join and play with you:
-            </p>
-
-            <div className="bg-pink-50 p-4 rounded-lg mb-6 relative">
-              <p className="text-3xl font-bold text-primary tracking-widest">{roomCode}</p>
-              <div className="absolute -right-2 -top-2 bg-white rounded-full p-1 shadow-md">
-                <span className="animate-pulse-love">❤️</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  navigator.clipboard.writeText(roomCode);
-                  showNotification('Room code copied to clipboard!', 'success');
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                Copy Code
-              </button>
-
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  // Create shareable link
-                  const shareUrl = window.location.href;
-                  const shareText = `Join me for a game of Love Sequence! Room code: ${roomCode}`;
-
-                  // Use Web Share API if available
-                  if (navigator.share) {
-                    navigator.share({
-                      title: 'Love Sequence Game',
-                      text: shareText,
-                      url: shareUrl,
-                    }).catch(err => {
-                      console.error('Error sharing:', err);
-                      // Fallback to copying the link
-                      navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-                      showNotification('Share info copied to clipboard!', 'success');
-                    });
-                  } else {
-                    // Fallback to copying the link
-                    navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-                    showNotification('Share info copied to clipboard!', 'success');
-                  }
-                }}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                Share Link
-              </button>
-            </div>
-
-            <div className="mt-8 text-gray-500 flex items-center justify-center">
-              <span className="animate-pulse-love mr-2">❤️</span>
-              <span>Once your partner joins, you can start the game</span>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-pink-100">
-              <p className="text-sm text-gray-500">
-                Players: {players.length}/2
-                {players.map((player, index) => (
-                  <span key={player.id} className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">
-                    {player.name} {player.isHost ? '(Host)' : ''}
-                  </span>
-                ))}
-              </p>
-            </div>
-          </div>
+          <WaitingRoom
+            roomCode={roomCode}
+            players={players}
+            isHost={currentPlayer?.isHost || false}
+            onStartGame={handleStartGame}
+          />
         </div>
       )}
 

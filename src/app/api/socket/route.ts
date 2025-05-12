@@ -5,7 +5,7 @@ import { createDeck, shuffleDeck, dealCards, createGameBoard, checkForSequence }
 import { Card, GameState } from '@/types/game';
 
 // Socket.io server instance
-let io: SocketIOServer;
+let io: any = null;
 
 // Store active games in memory
 const activeGames = new Map();
@@ -27,9 +27,11 @@ const initSocketServer = () => {
     });
 
     // Debug connection events
-    io.engine.on("connection_error", (err) => {
-      console.log("Connection error:", err.message);
-    });
+    if (io.engine) {
+      io.engine.on("connection_error", (err) => {
+        console.log("Connection error:", err.message);
+      });
+    }
 
     io.on('connection', (socket) => {
       console.log(`Socket connected with ID: ${socket.id}`);
@@ -424,15 +426,31 @@ export async function GET(req: NextRequest) {
     // This is needed for Socket.io to work with Next.js App Router
     const upgradeHeader = req.headers.get('connection')?.toLowerCase();
     if (upgradeHeader === 'upgrade') {
-      const res = new Response(null, { status: 101 });
+      console.log('WebSocket upgrade request received');
+      const res = new Response(null, {
+        status: 101,
+        headers: {
+          'Connection': 'Upgrade',
+          'Upgrade': 'websocket',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      });
       return res;
     }
   }
 
+  // For polling transport
+  console.log('HTTP request to socket endpoint');
   return new Response('Socket.io server is running. Connect with a WebSocket client.', {
     status: 200,
     headers: {
       'Content-Type': 'text/plain',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'
@@ -442,9 +460,34 @@ export async function GET(req: NextRequest) {
 
 // Handle OPTIONS requests for CORS
 export async function OPTIONS(req: NextRequest) {
+  console.log('OPTIONS request received');
   return new Response(null, {
     status: 200,
     headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
+}
+
+// Handle POST requests for Socket.io polling
+export async function POST(req: NextRequest) {
+  console.log('POST request to socket endpoint');
+  const socketIo = initSocketServer();
+
+  return new Response('Socket.io server is running.', {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'

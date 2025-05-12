@@ -19,7 +19,7 @@ module.exports = {
       },
       backgroundImage: {
         'gradient-love': 'linear-gradient(to right, #FF4B91, #FF8DC7)',
-        'hearts-pattern': "url('/images/hearts-pattern.png')",
+        'hearts-pattern': "url('/images/hearts-pattern.png'), url('/images/hearts-pattern.svg')",
       },
       boxShadow: {
         'love': '0 4px 14px 0 rgba(255, 75, 145, 0.25)',

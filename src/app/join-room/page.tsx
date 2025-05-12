@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { showNotification } from '@/components/Notification';
 
 export default function JoinRoom() {
   const [name, setName] = useState('');
@@ -10,6 +11,16 @@ export default function JoinRoom() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check if there's a room code in the URL
+    const codeFromUrl = searchParams.get('code');
+    if (codeFromUrl) {
+      setRoomCode(codeFromUrl.toUpperCase());
+      showNotification('Room code detected from link!', 'info');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +65,15 @@ export default function JoinRoom() {
 
         <h1 className="text-3xl font-bold mb-6 text-center love-title">Join Your Love</h1>
 
+        {roomCode && (
+          <div className="mb-6 text-center">
+            <div className="inline-block bg-pink-50 px-4 py-2 rounded-lg">
+              <p className="text-sm text-gray-600">You're joining room:</p>
+              <p className="text-xl font-bold text-primary">{roomCode}</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 relative z-10">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -66,28 +86,33 @@ export default function JoinRoom() {
               onChange={(e) => setName(e.target.value)}
               className="input w-full"
               placeholder="Enter your name"
+              autoFocus
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="roomCode" className="block text-sm font-medium text-gray-700 mb-1">
-              Room Code from Your Partner
-            </label>
-            <input
-              type="text"
-              id="roomCode"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              className="input w-full"
-              placeholder="Enter the 6-digit code"
-              maxLength={6}
-              required
-            />
-          </div>
+          {!roomCode && (
+            <div>
+              <label htmlFor="roomCode" className="block text-sm font-medium text-gray-700 mb-1">
+                Room Code from Your Partner
+              </label>
+              <input
+                type="text"
+                id="roomCode"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                className="input w-full"
+                placeholder="Enter the 6-digit code"
+                maxLength={6}
+                required
+              />
+            </div>
+          )}
 
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
           )}
 
           <button
