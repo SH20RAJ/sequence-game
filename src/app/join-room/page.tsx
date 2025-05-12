@@ -1,26 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { showNotification } from '@/components/Notification';
 
-export default function JoinRoom() {
+// Client component that uses useSearchParams
+function JoinRoomForm() {
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const searchParams = useSearchParams();
 
+  // We'll handle the URL params in a separate component
   useEffect(() => {
-    // Check if there's a room code in the URL
-    const codeFromUrl = searchParams.get('code');
+    // Get the code from URL query parameter if it exists
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = params.get('code');
     if (codeFromUrl) {
       setRoomCode(codeFromUrl.toUpperCase());
-      showNotification('Room code detected from link!', 'info');
     }
-  }, [searchParams]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,15 +65,6 @@ export default function JoinRoom() {
 
         <h1 className="text-3xl font-bold mb-6 text-center love-title">Join Your Love</h1>
 
-        {roomCode && (
-          <div className="mb-6 text-center">
-            <div className="inline-block bg-pink-50 px-4 py-2 rounded-lg">
-              <p className="text-sm text-gray-600">You're joining room:</p>
-              <p className="text-xl font-bold text-primary">{roomCode}</p>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 relative z-10">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -86,33 +77,28 @@ export default function JoinRoom() {
               onChange={(e) => setName(e.target.value)}
               className="input w-full"
               placeholder="Enter your name"
-              autoFocus
               required
             />
           </div>
 
-          {!roomCode && (
-            <div>
-              <label htmlFor="roomCode" className="block text-sm font-medium text-gray-700 mb-1">
-                Room Code from Your Partner
-              </label>
-              <input
-                type="text"
-                id="roomCode"
-                value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                className="input w-full"
-                placeholder="Enter the 6-digit code"
-                maxLength={6}
-                required
-              />
-            </div>
-          )}
+          <div>
+            <label htmlFor="roomCode" className="block text-sm font-medium text-gray-700 mb-1">
+              Room Code from Your Partner
+            </label>
+            <input
+              type="text"
+              id="roomCode"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+              className="input w-full"
+              placeholder="Enter the 6-digit code"
+              maxLength={6}
+              required
+            />
+          </div>
 
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
+            <p className="text-red-500 text-sm">{error}</p>
           )}
 
           <button
@@ -144,5 +130,27 @@ export default function JoinRoom() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component that wraps the form in a Suspense boundary
+export default function JoinRoom() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background bg-hearts-pattern p-4">
+        <div className="card w-full max-w-md p-8 text-center">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto mb-6"></div>
+            <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6 mb-6"></div>
+            <div className="h-10 bg-gray-200 rounded w-full mb-4"></div>
+            <div className="h-10 bg-gray-200 rounded w-full mb-6"></div>
+            <div className="h-10 bg-primary/30 rounded w-full"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <JoinRoomForm />
+    </Suspense>
   );
 }

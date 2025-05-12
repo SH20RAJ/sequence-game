@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Player } from '@/types/game';
 import { showNotification } from './Notification';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface WaitingRoomProps {
   roomCode: string;
@@ -99,7 +99,7 @@ export default function WaitingRoom({ roomCode, players, isHost, onStartGame }: 
 
       {showQR && (
         <div className="mb-6 p-4 bg-white rounded-lg inline-block mx-auto">
-          <QRCode value={joinUrl} size={150} />
+          <QRCodeSVG value={joinUrl} size={150} />
           <p className="mt-2 text-sm text-gray-500">Scan to join</p>
         </div>
       )}
